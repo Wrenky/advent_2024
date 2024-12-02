@@ -3,6 +3,7 @@ package helpers
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 
 	"github.com/samber/lo"
@@ -28,6 +29,28 @@ func Atoi(in string) int {
 		panic(fmt.Sprintf("helpers.Atoi recieved non integer string: %s", err))
 	}
 	return i
+}
+
+func FrequencyMap[A comparable](m1 []A) map[A]int {
+	res := make(map[A]int)
+	for _, val := range m1 {
+		if v, ok := res[val]; ok {
+			res[val] = v + 1
+		} else {
+			res[val] = 1
+		}
+	}
+	return res
+}
+
+// ---------------------------------------------------------------
+// Slice helpers
+// ---------------------------------------------------------------
+
+// Remove an element without  mutating
+func RemoveElement(slice []int, s int) []int {
+	newSlice := slices.Clone(slice)
+	return append(newSlice[:s], newSlice[s+1:]...)
 }
 
 // ---------------------------------------------------------------
