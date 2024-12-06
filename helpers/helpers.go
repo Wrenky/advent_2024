@@ -1,12 +1,11 @@
 package helpers
 
 import (
+	"advent/helpers/grid"
 	"fmt"
 	"math"
 	"slices"
 	"strconv"
-
-	"github.com/samber/lo"
 )
 
 //Graphs: https://github.com/dominikbraun/graph
@@ -54,60 +53,6 @@ func RemoveElement(slice []int, s int) []int {
 }
 
 // ---------------------------------------------------------------
-// Grid/2d array helpers
-// ---------------------------------------------------------------
-func Transpose[S any](slice [][]S) [][]S {
-	xl := len(slice[0])
-	yl := len(slice)
-	result := make([][]S, xl)
-	for i := range result {
-		result[i] = make([]S, yl)
-	}
-	for i := 0; i < xl; i++ {
-		for j := 0; j < yl; j++ {
-			result[i][j] = slice[j][i]
-		}
-	}
-	return result
-}
-func Rotate90[S any](slice [][]S) [][]S {
-	transposed := Transpose(slice)
-	result := [][]S{}
-	for _, v := range transposed {
-		result = append(result, lo.Reverse(v))
-	}
-	return result
-}
-func RotateN90[S any](slice [][]S) [][]S {
-	result := [][]S{}
-	for _, v := range slice {
-		result = append(result, lo.Reverse(v))
-	}
-	return Transpose(result)
-}
-
-// ---------------------------------------------------------------
-
-// coordinates! Mostly for grid problems
-// These are annoying because in math its x,y, but in code is [col][row]
-type Coord struct {
-	X, Y int
-}
-
-func (c Coord) String() string {
-	return fmt.Sprintf("(%d, %d)", c.X, c.Y)
-}
-func (a Coord) ManhattanDist(b Coord) int {
-	distance := math.Abs(float64(a.X-b.X)) + math.Abs(float64(a.Y-b.Y))
-	return int(distance)
-}
-
-func (c Coord) Add(o Coord) Coord {
-	return Coord{
-		X: c.X + o.X,
-		Y: c.Y + o.Y,
-	}
-}
 
 // These were used in advent day10 part 2 2023
 // --------------------------------------------------------------------------------
@@ -119,7 +64,7 @@ func (c Coord) Add(o Coord) Coord {
 func Picks(inner int, border int) int {
 	return inner + (border / 2) - 1
 }
-func PicksInnerPoints(c []Coord) int {
+func PicksInnerPoints(c []grid.Coord) int {
 	return Shoelace(c) - (len(c) / 2) + 1
 }
 
@@ -127,7 +72,7 @@ func PicksInnerPoints(c []Coord) int {
 // References:
 // https://artofproblemsolving.com/wiki/index.php/Shoelace_Theorem
 // https://en.wikipedia.org/wiki/Shoelace_formula
-func Shoelace(c []Coord) int {
+func Shoelace(c []grid.Coord) int {
 	sum := 0
 	p0 := c[len(c)-1]
 	for _, p1 := range c {
