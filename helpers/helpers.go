@@ -4,8 +4,10 @@ import (
 	"advent/helpers/grid"
 	"fmt"
 	"math"
+	"os"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 //Graphs: https://github.com/dominikbraun/graph
@@ -84,3 +86,16 @@ func Shoelace(c []grid.Coord) int {
 }
 
 // --------------------------------------------------------------------------------
+
+func ReadFile(filename string) string {
+	// Check if file exists
+	if _, err := os.Stat(filename); err != nil {
+		panic(fmt.Errorf("Failed to stat file %s: %s", filename, err))
+	}
+	// Read file contents
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		panic(fmt.Errorf("Failed to read file %s: %s", filename, err))
+	}
+	return strings.TrimRight(string(data), "\n")
+}

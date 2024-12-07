@@ -1,37 +1,66 @@
 package main
 
 import (
-	_ "embed"
-	"fmt"
+	"advent/helpers"
+	log "log/slog"
 	"strings"
+	"time"
 
+	"github.com/alecthomas/kong"
 	"github.com/samber/lo"
 )
 
-//go:embed demo
-var data string
-
-func init() {
-	// Strip trailing newline
-	data = strings.TrimRight(data, "\n")
-	if len(data) == 0 {
-		panic("No input file")
-	}
+type cli struct {
+	Debug     bool   `name:"debug" short:"v"`
+	Run       bool   `name:"input" short:"r" description:"Runs the file named \"input\""`
+	InputFile string `name:"file" short:"f" default:"demo"`
 }
 
-func main() {
-	parsed := parseInput(data)
-
-	for _, v := range parsed {
-		fmt.Printf("%v\n", v)
+func HandleCommandLine() *cli {
+	args := &cli{}
+	kong.Parse(args,
+		kong.Description("Run code"),
+		kong.UsageOnError(),
+		kong.ConfigureHelp(kong.HelpOptions{
+			//	Compact: true,
+		}),
+	)
+	if args.Debug {
+		log.SetLogLoggerLevel(log.LevelDebug)
 	}
-	//pre, ans, post := time.Now(), len(parsed), time.Now()
-	//fmt.Printf("Part1 answer: %d, in %s\n", ans, post.Sub(pre))
+	if args.Run && args.InputFile == "demo" {
+		args.InputFile = "input"
+	}
+	return args
 }
 
-// This needs to change to match your actual input
+// This needs to change to match the input
 func parseInput(input string) []string {
 	return lo.Map(strings.Split(input, "\n"), func(line string, _ int) string {
 		return line
 	})
+}
+
+func main() {
+	// Handle command line
+	args := HandleCommandLine()
+
+	// Parse input
+	data := helpers.ReadFile(args.InputFile)
+	parsed := parseInput(data)
+	for _, v := range parsed {
+		log.Debug("", "line", v)
+	}
+
+	// Part 1
+	pre1 := time.Now()
+	p1 := 0 //work here
+	post1 := time.Now()
+	log.Info("Part1", "answer", p1, "time", post1.Sub(pre1))
+
+	// Part 2
+	pre2 := time.Now()
+	p2 := 0 // work here
+	post2 := time.Now()
+	log.Info("Part2", "answer", p2, "time", post2.Sub(pre2))
 }
