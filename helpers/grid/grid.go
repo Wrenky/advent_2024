@@ -63,6 +63,16 @@ func Copy[T comparable](g Grid[T]) Grid[T] {
 	return newG
 }
 
+func InBounds[T comparable](g Grid[T], c Coord) bool {
+	if c.X < 0 || c.Y < 0 {
+		return false
+	}
+	if (c.X > len(g[0])-1) || (c.Y > len(g)-1) {
+		return false
+	}
+	return true
+}
+
 // These are annoying because in math its x,y, but in head is [col (y)][row (x)]
 // y is up/down, x is left right
 type Coord struct {

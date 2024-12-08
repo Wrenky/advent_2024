@@ -36,30 +36,38 @@ func HandleCommandLine() *cli {
 	return args
 }
 
-// This needs to change to match the input
-func parseInput(input string) [][]string {
+// ------------------------------------------------------------------
+
+func parseInput(input string) grid.Grid[string] {
 	return lo.Map(strings.Split(input, "\n"), func(line string, _ int) []string {
 		return strings.Split(line, "")
 	})
 }
 
-func findAttenas(g [][]string) map[string][]grid.Coord {
-	attenas := make(map[string][]grid.Coord)
+func findAttennas(g grid.Grid[string]) map[string][]grid.Coord {
+	attennas := make(map[string][]grid.Coord)
 	for ri, row := range g {
 		for ci, val := range row {
 			if val != "." {
-				if v, ok := attenas[val]; ok {
-					attenas[val] = append(v, grid.Coord{Y: ri, X: ci})
-				} else {
-					attenas[val] = append([]grid.Coord{}, grid.Coord{Y: ri, X: ci})
-				}
+				v := lo.ValueOr(attennas, val, []grid.Coord{})
+				attennas[val] = append(v, grid.Coord{Y: ri, X: ci})
 			}
 		}
 	}
-	return attenas
+	return attennas
 }
 
-func next2points(g [][]string, a, b grid.Coord) []grid.Coord {
+// These three functions are the main "work" of the problem
+// StepXY returns the X/Y step amounts needed to find the next points using bcos
+// next2points returns the point immedately before coord a, and after coord b
+// nextPoints returns all the points within the grid along those lines
+func stepXY(a, b grid.Coord) (int, int) {
+	dx := b.X - a.X
+	dy := b.Y - a.Y
+	gcd := helpers.GCD(int(math.Abs(float64(dx))), int(math.Abs(float64(dy))))
+	return (dx / gcd), (dy / gcd)
+}
+func next2points(g grid.Grid[string], a, b grid.Coord) []grid.Coord {
 	stepX, stepY := stepXY(a, b)
 	n1 := grid.Coord{
 		X: a.X - stepX,
@@ -70,17 +78,9 @@ func next2points(g [][]string, a, b grid.Coord) []grid.Coord {
 		Y: b.Y + stepY,
 	}
 	return lo.Filter([]grid.Coord{n1, n2}, func(a grid.Coord, _ int) bool {
-		return inBounds(g, a)
+		return grid.InBounds(g, a)
 	})
 }
-
-func stepXY(a, b grid.Coord) (int, int) {
-	dx := b.X - a.X
-	dy := b.Y - a.Y
-	gcd := helpers.GCD(int(math.Abs(float64(dx))), int(math.Abs(float64(dy))))
-	return (dx / gcd), (dy / gcd)
-}
-
 func nextPoints(g [][]string, a, b grid.Coord) []grid.Coord {
 	stepX, stepY := stepXY(a, b)
 
@@ -90,7 +90,7 @@ func nextPoints(g [][]string, a, b grid.Coord) []grid.Coord {
 			X: c.X + sX,
 			Y: c.Y + sY,
 		}
-		if !inBounds(g, next) {
+		if !grid.InBounds(g, next) {
 			return agg
 		}
 		return f(next, sX, sY, append(agg, next))
@@ -100,39 +100,45 @@ func nextPoints(g [][]string, a, b grid.Coord) []grid.Coord {
 	return append(bak, fwd...)
 }
 
-// Move to grids?
-func inBounds(g [][]string, c grid.Coord) bool {
-	if c.X < 0 || c.Y < 0 {
-		return false
-	}
-	if (c.X > len(g[0])-1) || (c.Y > len(g)-1) {
-		return false
-	}
-	return true
+// Type to clean up all those type signatures
+type Diagonal lo.Tuple2[grid.Coord, grid.Coord]
+
+// Map over all the map arrays, building up Diagonals of similar attennas
+func findDiagonals(attennas map[string][]grid.Coord) []Diagonal {
+	return lo.FlatMap(lo.Values(attennas), func(v []grid.Coord, _ int) []Diagonal {
+		if len(v) == 1 {
+			// single attenna, toss
+			return []Diagonal{}
+		}
+		return lo.FlatMap(v, func(a grid.Coord, i int) []Diagonal {
+			// Exclude ourselves, and nodes we previously found with i+1
+			return lo.Map(v[i+1:], func(b grid.Coord, _ int) Diagonal {
+				return Diagonal(lo.T2(a, b))
+			})
+		})
+	})
 }
 
-func ValidNodes(g [][]string, nodes []grid.Coord) []grid.Coord {
-	valids := lo.Filter(nodes, func(a grid.Coord, _ int) bool {
-		return inBounds(g, a)
+// These next two do part1/part2 based on the work we already did with diagonals/attennas
+func UniqueAntinodes(cityMap grid.Grid[string], diags []Diagonal) []grid.Coord {
+	antinodes := lo.FlatMap(diags, func(ele Diagonal, _ int) []grid.Coord {
+		a, b := lo.Tuple2[grid.Coord, grid.Coord](ele).Unpack()
+		return next2points(cityMap, a, b)
 	})
-	freq := helpers.FrequencyMap[grid.Coord](valids)
+	freq := helpers.FrequencyMap[grid.Coord](antinodes)
 	return lo.Keys(freq)
 }
 
-func findDiagonals(attenas map[string][]grid.Coord) []lo.Tuple2[grid.Coord, grid.Coord] {
-	diags := []lo.Tuple2[grid.Coord, grid.Coord]{}
-	for _, v := range attenas {
-		if len(v) == 1 {
-			continue
-		}
-		pairs := lo.FlatMap(v, func(a grid.Coord, i int) []lo.Tuple2[grid.Coord, grid.Coord] {
-			return lo.Map(v[i+1:], func(b grid.Coord, _ int) lo.Tuple2[grid.Coord, grid.Coord] {
-				return lo.T2(a, b)
-			})
-		})
-		diags = append(diags, pairs...)
-	}
-	return diags
+func LineAntinodes(cityMap grid.Grid[string], diags []Diagonal, attennas map[string][]grid.Coord) []grid.Coord {
+	antinodes := lo.FlatMap(diags, func(ele Diagonal, _ int) []grid.Coord {
+		a, b := lo.Tuple2[grid.Coord, grid.Coord](ele).Unpack()
+		return nextPoints(cityMap, a, b)
+	})
+	m2 := lo.OmitBy(attennas, func(k string, v []grid.Coord) bool {
+		return len(v) < 1
+	})
+	attenaNodes := lo.Flatten(lo.Values(m2))
+	return lo.Uniq(append(antinodes, attenaNodes...))
 }
 
 func main() {
@@ -141,38 +147,27 @@ func main() {
 
 	// Parse input
 	data := helpers.ReadFile(args.InputFile)
-	parsed := parseInput(data)
-	for _, v := range parsed {
+
+	pre := time.Now()
+	cityMap := parseInput(data)
+	for _, v := range cityMap {
 		log.Debug("", "line", v)
 	}
+	attennas := findAttennas(cityMap)
+	diags := findDiagonals(attennas)
+	post := time.Now()
+	log.Info("Setup timing", "time", post.Sub(pre))
+
+	// Part 1
 	pre1 := time.Now()
-
-	// Setup stuff
-	attenas := findAttenas(parsed)
-	diags := findDiagonals(attenas)
-
-	nodes := lo.FlatMap(diags, func(ele lo.Tuple2[grid.Coord, grid.Coord], _ int) []grid.Coord {
-		a, b := ele.Unpack()
-		return next2points(parsed, a, b)
-	})
-	freq := helpers.FrequencyMap[grid.Coord](nodes)
-	valids := lo.Keys(freq)
-	p1 := len(valids)
+	antinodes := UniqueAntinodes(cityMap, diags)
 	post1 := time.Now()
-	log.Info("Part1", "answer", p1, "time", post1.Sub(pre1))
+	log.Info("Part1", "answer", len(antinodes), "time", post1.Sub(pre1))
 
 	// Part 2
 	pre2 := time.Now()
-	expandedNodes := lo.FlatMap(diags, func(ele lo.Tuple2[grid.Coord, grid.Coord], _ int) []grid.Coord {
-		a, b := ele.Unpack()
-		return nextPoints(parsed, a, b)
-	})
-	m2 := lo.OmitBy(attenas, func(k string, v []grid.Coord) bool {
-		return len(v) < 1
-	})
-	attenaNodes := lo.Flatten(lo.Values(m2))
-	combined := lo.Uniq(append(expandedNodes, attenaNodes...))
-	p2 := len(combined)
+	line_antinodes := LineAntinodes(cityMap, diags, attennas)
 	post2 := time.Now()
-	log.Info("Part2", "answer", p2, "time", post2.Sub(pre2))
+
+	log.Info("Part2", "answer", len(line_antinodes), "time", post2.Sub(pre2))
 }
