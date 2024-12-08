@@ -49,7 +49,7 @@ func FrequencyMap[A comparable](m1 []A) map[A]int {
 // ---------------------------------------------------------------
 
 // Remove an element without  mutating
-func RemoveElement(slice []int, s int) []int {
+func RemoveElement[T any](slice []T, s int) []T {
 	newSlice := slices.Clone(slice)
 	return append(newSlice[:s], newSlice[s+1:]...)
 }
