@@ -3,11 +3,14 @@ package helpers
 import (
 	"advent/helpers/grid"
 	"fmt"
+	log "log/slog"
 	"math"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/alecthomas/kong"
 )
 
 //Graphs: https://github.com/dominikbraun/graph
@@ -86,6 +89,8 @@ func Shoelace(c []grid.Coord) int {
 }
 
 // --------------------------------------------------------------------------------
+// Helpers for getting data in and processing results
+// --------------------------------------------------------------------------------
 
 func ReadFile(filename string) string {
 	// Check if file exists
@@ -98,4 +103,28 @@ func ReadFile(filename string) string {
 		panic(fmt.Errorf("Failed to read file %s: %s", filename, err))
 	}
 	return strings.TrimRight(string(data), "\n")
+}
+
+type CLI struct {
+	Debug     bool   `name:"debug" short:"v"`
+	Run       bool   `name:"input" short:"r" description:"Runs the file named \"input\""`
+	InputFile string `name:"file" short:"f" default:"demo"`
+}
+
+func HandleCommandLine() *CLI {
+	args := &CLI{}
+	kong.Parse(args,
+		kong.Description("Run code"),
+		kong.UsageOnError(),
+		kong.ConfigureHelp(kong.HelpOptions{
+			//	Compact: true,
+		}),
+	)
+	if args.Debug {
+		log.SetLogLoggerLevel(log.LevelDebug)
+	}
+	if args.Run && args.InputFile == "demo" {
+		args.InputFile = "input"
+	}
+	return args
 }
