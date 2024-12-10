@@ -6,33 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/kong"
 	"github.com/samber/lo"
 )
-
-type cli struct {
-	Debug     bool   `name:"debug" short:"v"`
-	Run       bool   `name:"input" short:"r" description:"Runs the file named \"input\""`
-	InputFile string `name:"file" short:"f" default:"demo"`
-}
-
-func HandleCommandLine() *cli {
-	args := &cli{}
-	kong.Parse(args,
-		kong.Description("Run code"),
-		kong.UsageOnError(),
-		kong.ConfigureHelp(kong.HelpOptions{
-			//	Compact: true,
-		}),
-	)
-	if args.Debug {
-		log.SetLogLoggerLevel(log.LevelDebug)
-	}
-	if args.Run && args.InputFile == "demo" {
-		args.InputFile = "input"
-	}
-	return args
-}
 
 // This needs to change to match the input
 func parseInput(input string) []string {
@@ -43,9 +18,7 @@ func parseInput(input string) []string {
 
 func main() {
 	// Handle command line
-	args := HandleCommandLine()
-
-	// Parse input
+	args := helpers.HandleCommandLine()
 	data := helpers.ReadFile(args.InputFile)
 	parsed := parseInput(data)
 	for _, v := range parsed {
