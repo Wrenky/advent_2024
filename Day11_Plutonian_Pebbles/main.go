@@ -25,33 +25,36 @@ type set struct {
 
 var cache = make(map[set]int)
 
+// Memoized!
 func Blink(a, count int) int {
 	me := set{a, count}
 	// Already solved for this stone at count X
 	if v, ok := cache[me]; ok {
 		return v
 	}
+	cache[me] = blink(a, count)
+	return cache[me]
+}
 
+func blink(a, count int) int {
 	b := strconv.Itoa(a)
 	switch {
 	case count == 0:
 		// Iteration done, just add one stone
-		cache[me] = 1
+		return 1
 	case a == 0:
 		// Convert it to 1
-		cache[me] = Blink(1, count-1)
+		return Blink(1, count-1)
 	case len(b)%2 == 0:
 		// Split and call on both ends
 		left := helpers.Atoi(b[0 : len(b)/2])
 		right := helpers.Atoi(b[len(b)/2:])
-		cache[me] = Blink(left, count-1) + Blink(right, count-1)
+		return Blink(left, count-1) + Blink(right, count-1)
 	default:
 		// Multiply by 2024
-		cache[me] = Blink(a*2024, count-1)
+		return Blink(a*2024, count-1)
 
 	}
-
-	return cache[me]
 }
 
 func main() {
